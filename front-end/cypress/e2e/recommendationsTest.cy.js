@@ -4,7 +4,7 @@ import { faker } from "@faker-js/faker";
 const URL = "http://localhost:3000";
 const URL_API = "http://localhost:5000"
 
-beforeEach(() => {
+before(() => {
     cy.resetDatabase();
 })
 
@@ -17,13 +17,40 @@ describe("home page", () => {
     
     it("should post new recommendation", () => {
         cy.visit("/");
-        for(let i = 0; i < 3; i++){
-            const recommendation = {
-                name: faker.lorem.words(3),
-                youtubeLink: "https://youtu.be/perTTMRpc_U"
-            }
-            cy.createRecommendations(recommendation);
-            cy.contains(recommendation.name);
-        }
+        cy.createRecommendations().then(name => {
+            cy.contains(name);
+        });
     });
+
+    it("should insert upvote", () => {
+        cy.addUpvote().then(() => {
+            cy.get("article:last").within(() => {
+                cy.get("div:last").invoke("text").then((text) => {
+                    cy.wrap(text).should("equal", "1");
+                });
+            });
+        });
+    });
+
+    it("should insert downvote", () => {
+        for(let i = 0; i < 2; i++){
+            cy.addDownvote().then(() => {
+                cy.get("article:last").within(() => {
+                    cy.get("div:last").invoke("text").then((text) => {
+                        cy.wrap(text).should("equal", `${(-1)*i}`);
+                    });
+                });
+            });
+        }        
+    });
+
+    it("should delete recommendation when score is less than -5", () =>{
+        for(let i = 0; i < 5; i++){
+            cy.addDownvote();
+        }
+        cy.get("div:last").invoke("text").then(text => {
+            cy.wrap(text).should("equal", "No recommendations yet! Create your own :)");
+
+        })
+    })
 })
