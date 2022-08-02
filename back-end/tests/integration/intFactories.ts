@@ -19,17 +19,20 @@ async function createRecommendation(){
 }
 
 async function createManyRecommendation(amount:number){
+    const list:Recommendation[] = [];
     for(let i = 0; i < amount; i++){
         const recommendation = {
-            name: faker.music.songName(),
+            name: `teste ${faker.music.songName()}`,
             youtubeLink: "https://youtu.be/perTTMRpc_U",
             score: parseInt(faker.random.numeric())
 
         };
-        await prisma.recommendation.create({
+        const newRecommendation = await prisma.recommendation.create({
             data: recommendation
         });
+        list.push(newRecommendation);
     }
+    return list;
 }
 
 const recommendationFactory = {
