@@ -1,8 +1,4 @@
 import {jest} from "@jest/globals";
-import { Recommendation } from "@prisma/client";
-import { response } from "express";
-import { not } from "joi";
-import { prisma } from "../../src/database.js";
 import { recommendationRepository } from "../../src/repositories/recommendationRepository.js";
 import { recommendationService } from "../../src/services/recommendationsService.js";
 import recommendationFactory from "./factories.js";
@@ -188,4 +184,4 @@ describe("get top recommendations", () => {
         expect(recommendationRepository.getAmountByScore).toBeCalled();
         expect(promise).toBe(data);
     });
-})
+});
