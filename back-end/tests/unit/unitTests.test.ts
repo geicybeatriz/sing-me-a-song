@@ -1,4 +1,7 @@
 import {jest} from "@jest/globals";
+import { Recommendation } from "@prisma/client";
+import { response } from "express";
+import { not } from "joi";
 import { prisma } from "../../src/database.js";
 import { recommendationRepository } from "../../src/repositories/recommendationRepository.js";
 import { recommendationService } from "../../src/services/recommendationsService.js";
@@ -93,5 +96,96 @@ describe("get recommendations by id", () => {
         jest.spyOn(recommendationRepository, "find").mockResolvedValueOnce(null);
         const promise = recommendationService.getById(0);
         expect(promise).rejects.toEqual({type:"not_found", message: ""});
+    });
+});
+
+describe("get random recommendations", () => {
+    it("should return recommendations with score bigger than 10, when random bigger than 0.7", async () => {
+        const data = await recommendationFactory.createRecommendation();
+        const biggerScoreData = {...data, score:15};
+
+
+        jest.spyOn(Math, "random").mockImplementationOnce(():any => 0.7);
+        jest.spyOn(Math, "floor").mockImplementationOnce(():any => 0);
+        jest.spyOn(recommendationRepository, "findAll").mockImplementationOnce(():any => [biggerScoreData, {...data, id:3}]);
+
+        const promise = await recommendationService.getRandom();
+
+        expect(Math.random).toBeCalled();
+        expect(Math.floor).toBeCalled();
+        expect(recommendationRepository.findAll).toBeCalled();
+        expect(promise).toBe(biggerScoreData);
+    });
+
+    it("should return recommendations with score less than 10, when random bigger than 0.3", async () => {
+        const data = await recommendationFactory.createRecommendation();
+        const biggerScoreData = {...data, score:15};
+
+        jest.spyOn(Math, "random").mockImplementationOnce(():any => 0.3);
+        jest.spyOn(Math, "floor").mockImplementationOnce(():any => 0);
+        jest.spyOn(recommendationRepository, "findAll").mockImplementationOnce(():any => [{...data, id:3}, biggerScoreData]);
+
+        const promise = await recommendationService.getRandom();
+
+        expect(Math.random).toBeCalled();
+        expect(Math.floor).toBeCalled();
+        expect(recommendationRepository.findAll).toBeCalled();
+        expect(promise).not.toBe(biggerScoreData);
+    });
+
+    it("should return recommendations when all recommendations score > 10", async () => {
+        const data = await recommendationFactory.createManyRecommendation(5);
+        data.map(item => {item.score = 20});
+        const index:number = Math.floor(Math.random()*data.length)
+        
+        jest.spyOn(Math, "random").mockImplementationOnce(():any => 1);
+        jest.spyOn(Math, "floor").mockImplementationOnce(():any => index);
+        jest.spyOn(recommendationRepository, "findAll").mockImplementationOnce(():any => data);
+
+        const promise = await recommendationService.getRandom();
+
+        expect(Math.random).toBeCalled();
+        expect(Math.floor).toBeCalled();
+        expect(recommendationRepository.findAll).toBeCalled();
+        expect(promise).toBe(data[index]);
+    });
+
+    it("should return recommendations when all recommendations score <= 10", async () => {
+        const data = await recommendationFactory.createManyRecommendation(5);
+        data.map(item => {item.score = 8});
+        const index:number = Math.floor(Math.random()*data.length)
+        
+        jest.spyOn(Math, "random").mockImplementationOnce(():any => 1);
+        jest.spyOn(Math, "floor").mockImplementationOnce(():any => index);
+        jest.spyOn(recommendationRepository, "findAll").mockImplementationOnce(():any => data);
+
+        const promise = await recommendationService.getRandom();
+
+        expect(Math.random).toBeCalled();
+        expect(Math.floor).toBeCalled();
+        expect(recommendationRepository.findAll).toBeCalled();
+        expect(promise).toBe(data[index]);
+    });
+
+    it("should return error when recommendations not exists", () => {
+        jest.spyOn(recommendationRepository, "findAll").mockResolvedValueOnce([]);
+
+        const promise = recommendationService.getRandom();
+
+        expect(recommendationRepository.findAll).toBeCalled();
+        expect(promise).rejects.toEqual({message:"", type:"not_found"});
+    });
+});
+
+describe("get top recommendations", () => {
+    it("get recommendations with biggest scores", async () => {
+        const amount:number = 10;
+        const data = await recommendationFactory.createManyRecommendation(10);
+
+        jest.spyOn(recommendationRepository, "getAmountByScore").mockImplementationOnce(():any => data);
+        const promise = await recommendationService.getTop(10);
+
+        expect(recommendationRepository.getAmountByScore).toBeCalled();
+        expect(promise).toBe(data);
     });
 })
